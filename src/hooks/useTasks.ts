@@ -5,6 +5,7 @@ import { taskRepository } from '@/core/adapters/localAdapter';
 import type { Task, TaskStatus } from '@/core/ports/taskRepository';
 import type { TaskCategory } from '@/utils/categories';
 import { urgencyWeight } from '@/utils/time';
+import { getNotificationEnabled } from '@/components/visual/NotificationBell';
 
 export type FilterStatus   = 'all' | TaskStatus;
 export type FilterCategory = 'all' | TaskCategory;
@@ -21,6 +22,7 @@ function sortByUrgency(tasks: Task[]): Task[] {
 function sendNotification(title: string, body: string) {
   if (typeof window === 'undefined' || !('Notification' in window)) return;
   if (Notification.permission !== 'granted') return;
+  if (!getNotificationEnabled()) return;
   new Notification(title, { body, icon: '/favicon.ico' });
 }
 
