@@ -3,7 +3,7 @@
  * Swap `taskRepository` import in useTasks.ts from localAdapter to remoteAdapter
  * when you're ready to go server-side. No UI code changes required.
  */
-import type { ITaskRepository, Task, TaskStatus } from '@/core/ports/taskRepository';
+import type { ITaskRepository, Task, TaskStatus, Priority, Subtask, RepeatRule } from '@/core/ports/taskRepository';
 import type { TaskCategory } from '@/utils/categories';
 
 export class RemoteAdapter implements ITaskRepository {
@@ -15,7 +15,17 @@ export class RemoteAdapter implements ITaskRepository {
     return res.json();
   }
 
-  async create(data: { title: string; notes?: string; category: TaskCategory; deadline: string; status: TaskStatus }): Promise<Task> {
+  async create(data: {
+    title: string;
+    notes?: string;
+    category: TaskCategory;
+    deadline: string;
+    status: TaskStatus;
+    priority?: Priority;
+    tags?: string[];
+    subtasks?: Subtask[];
+    repeat?: RepeatRule;
+  }): Promise<Task> {
     const res = await fetch(`${this.apiBase}/tasks`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -38,6 +48,28 @@ export class RemoteAdapter implements ITaskRepository {
   async delete(id: string): Promise<void> {
     const res = await fetch(`${this.apiBase}/tasks/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete task');
+  }
+
+  async softDelete(id: string): Promise<void> {
+    const res = await fetch(`${this.apiBase}/tasks/${id}/trash`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to trash task');
+  }
+
+  async getTrash(): Promise<Task[]> {
+    const res = await fetch(`${this.apiBase}/tasks/trash`);
+    if (!res.ok) throw new Error('Failed to fetch trash');
+    return res.json();
+  }
+
+  async restore(id: string): Promise<Task> {
+    const res = await fetch(`${this.apiBase}/tasks/${id}/restore`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to restore task');
+    return res.json();
+  }
+
+  async emptyTrash(): Promise<void> {
+    const res = await fetch(`${this.apiBase}/tasks/trash`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to empty trash');
   }
 
   async exportJSON(): Promise<string> {

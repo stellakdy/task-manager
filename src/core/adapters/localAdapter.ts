@@ -1,14 +1,15 @@
 import { v4 as uuid } from 'uuid';
-import type { ITaskRepository, Task, TaskStatus } from '@/core/ports/taskRepository';
+import type { ITaskRepository, Task, TaskStatus, Priority, Subtask, RepeatRule } from '@/core/ports/taskRepository';
 import type { TaskCategory } from '@/utils/categories';
 
 const STORAGE_KEY = 'task-manager-v1';
+const TRASH_KEY   = 'task-manager-trash';
+const TRASH_TTL   = 7 * 24 * 60 * 60 * 1000; // 7일
 
 function readStorage(): Task[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]') as Partial<Task>[];
-    // 기존 데이터 호환: 누락 필드 기본값 보정
     return raw.map((t) => ({
       id:           t.id ?? uuid(),
       title:        t.title ?? '',
@@ -21,7 +22,29 @@ function readStorage(): Task[] {
       createdAt:    t.createdAt ?? t.lastModified ?? new Date().toISOString(),
       notified:     t.notified ?? false,
       completedAt:  t.completedAt,
+      // 신규 필드 기본값
+      pinned:       t.pinned ?? false,
+      priority:     t.priority ?? 'normal',
+      subtasks:     t.subtasks ?? [],
+      tags:         t.tags ?? [],
+      progress:     t.progress ?? 0,
+      sortOrder:    t.sortOrder ?? 0,
+      deletedAt:    t.deletedAt,
+      repeat:       t.repeat,
+      timeSessions: t.timeSessions ?? [],
     }));
+  } catch {
+    return [];
+  }
+}
+
+function readTrash(): Task[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = JSON.parse(localStorage.getItem(TRASH_KEY) ?? '[]') as Task[];
+    const now = Date.now();
+    // 7일 지난 항목 자동 제거
+    return raw.filter((t) => t.deletedAt && now - new Date(t.deletedAt).getTime() < TRASH_TTL);
   } catch {
     return [];
   }
@@ -29,6 +52,10 @@ function readStorage(): Task[] {
 
 function writeStorage(tasks: Task[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}
+
+function writeTrash(tasks: Task[]): void {
+  localStorage.setItem(TRASH_KEY, JSON.stringify(tasks));
 }
 
 function mergeByLastModified(existing: Task[], incoming: Task[]): Task[] {
@@ -54,18 +81,31 @@ class LocalAdapter implements ITaskRepository {
     category: TaskCategory;
     deadline: string;
     status: TaskStatus;
+    priority?: Priority;
+    tags?: string[];
+    subtasks?: Subtask[];
+    repeat?: RepeatRule;
   }): Promise<Task> {
     const now = new Date().toISOString();
+    const all = readStorage();
+    const maxOrder = all.reduce((m, t) => Math.max(m, t.sortOrder), 0);
     const task: Task = {
-      notes:       '',
+      notes:        '',
+      pinned:       false,
+      priority:     'normal',
+      subtasks:     [],
+      tags:         [],
+      progress:     0,
+      timeSessions: [],
       ...data,
-      id:          uuid(),
+      id:           uuid(),
       lastModified: now,
-      createdAt:   now,
-      isSynced:    false,
-      notified:    false,
+      createdAt:    now,
+      isSynced:     false,
+      notified:     false,
+      sortOrder:    maxOrder + 1,
     };
-    writeStorage([...readStorage(), task]);
+    writeStorage([...all, task]);
     return task;
   }
 
@@ -77,10 +117,9 @@ class LocalAdapter implements ITaskRepository {
       ...tasks[idx],
       ...patch,
       id,
-      createdAt:   tasks[idx].createdAt,
+      createdAt:    tasks[idx].createdAt,
       lastModified: new Date().toISOString(),
-      // 명시적 isSynced 패치가 없으면 false (변경된 것)
-      isSynced: patch.isSynced ?? false,
+      isSynced:     patch.isSynced ?? false,
     };
     tasks[idx] = updated;
     writeStorage(tasks);
@@ -89,6 +128,38 @@ class LocalAdapter implements ITaskRepository {
 
   async delete(id: string): Promise<void> {
     writeStorage(readStorage().filter((t) => t.id !== id));
+  }
+
+  // ── 휴지통 ──
+  async softDelete(id: string): Promise<void> {
+    const tasks = readStorage();
+    const target = tasks.find((t) => t.id === id);
+    if (!target) return;
+    target.deletedAt = new Date().toISOString();
+    writeStorage(tasks.filter((t) => t.id !== id));
+    const trash = readTrash();
+    trash.push(target);
+    writeTrash(trash);
+  }
+
+  async getTrash(): Promise<Task[]> {
+    return readTrash();
+  }
+
+  async restore(id: string): Promise<Task> {
+    const trash = readTrash();
+    const target = trash.find((t) => t.id === id);
+    if (!target) throw new Error(`Trash item ${id} not found`);
+    delete target.deletedAt;
+    const tasks = readStorage();
+    tasks.push(target);
+    writeStorage(tasks);
+    writeTrash(trash.filter((t) => t.id !== id));
+    return target;
+  }
+
+  async emptyTrash(): Promise<void> {
+    writeTrash([]);
   }
 
   async exportJSON(): Promise<string> {
