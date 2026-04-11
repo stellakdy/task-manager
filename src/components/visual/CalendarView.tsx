@@ -105,29 +105,22 @@ export default function CalendarView({ tasks, locale }: Props) {
                 )}
               </div>
 
-              {/* 작업 목록 (최대 3개) */}
-              <div className="space-y-0.5">
-                {dateTasks.slice(0, 3).map((tk) => {
+              {/* 작업 목록 (최대로 보이지 않고 점으로만) */}
+              <div className="flex flex-wrap gap-1 mt-1 px-1">
+                {dateTasks.slice(0, 5).map((tk) => {
                   const cs = CATEGORY_STYLES[tk.category ?? '기타'];
                   const isDone = tk.status === 'done';
-                  const isOverdue = !isDone && new Date(tk.deadline) < new Date();
-
                   return (
                     <div key={tk.id}
-                      className={`flex items-center gap-0.5 rounded px-1 py-px text-[9px] font-medium truncate ${
-                        isDone ? 'opacity-40 line-through' : ''
-                      }`}
-                      style={{
-                        backgroundColor: `${cs.dot}18`,
-                        color: isOverdue ? '#EF4444' : cs.dot,
-                        borderLeft: `2px solid ${cs.dot}`,
-                      }}
+                      className={`w-1.5 h-1.5 rounded-full ${isDone ? 'opacity-30' : ''}`}
+                      style={{ backgroundColor: cs.dot }}
                       title={`${tk.title} - ${new Date(tk.deadline).toLocaleTimeString(locale === 'en' ? 'en' : locale === 'ja' ? 'ja' : 'ko', { hour: '2-digit', minute: '2-digit' })}`}
-                    >
-                      {tk.title}
-                    </div>
+                    />
                   );
                 })}
+                {dateTasks.length > 5 && (
+                  <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-slate-600" title={`+${dateTasks.length - 5} more`} />
+                )}
               </div>
             </div>
           );

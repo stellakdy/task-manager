@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, memo } from 'react';
-import { Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Pin, Copy, GripVertical, Link2, Plus, ExternalLink } from 'lucide-react';
+import { Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Pin, Copy, GripVertical, Link2, Plus, ExternalLink, CheckCircle } from 'lucide-react';
 import type { Task, TaskStatus, Priority, TaskLink } from '@/core/ports/taskRepository';
 import { CATEGORIES, CATEGORY_STYLES } from '@/utils/categories';
 import type { TaskCategory } from '@/utils/categories';
@@ -154,11 +154,30 @@ function TaskCardInner({ task, locale, allTags, onUpdate, onDelete, onDuplicate,
 
   const inputClass = "w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-sm text-gray-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-400";
 
+  const isSelected = bulkMode && selected;
+  const cardBorder = isSelected ? 'border-blue-500 ring-1 ring-blue-500 shadow-md' : styles.card;
+  const cardBg = isSelected ? 'bg-blue-50/50 dark:bg-blue-900/20' : '';
+  const bulkClasses = bulkMode ? 'cursor-pointer hover:border-blue-400' : '';
+
+  function handleCardClick(e: React.MouseEvent) {
+    if (!bulkMode || !onSelect || editing) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('button, input, select, textarea, a')) return;
+    onSelect(task.id);
+  }
+
   return (
-    <div className={`rounded-xl border-2 shadow-sm transition-all duration-500 overflow-hidden flex ${styles.card} ${task.pinned ? 'ring-2 ring-yellow-400/50' : ''} ${justCompleted ? 'animate-complete' : ''}`}
-      style={{ backgroundImage: `linear-gradient(to right, ${catStyle.dot}10, transparent 40%)` }}>
+    <div className={`relative rounded-xl border-2 shadow-sm transition-all duration-300 overflow-hidden flex ${cardBorder} ${cardBg} ${bulkClasses} ${task.pinned ? 'ring-2 ring-yellow-400/50' : ''} ${justCompleted ? 'animate-complete' : ''}`}
+      style={{ backgroundImage: isSelected ? 'none' : `linear-gradient(to right, ${catStyle.dot}10, transparent 40%)` }}
+      onClick={handleCardClick}
+    >
       {/* 카테고리 색상 바 */}
-      <div className="w-2 shrink-0" style={{ backgroundColor: catStyle.dot }} />
+      <div className="w-2 shrink-0 transition-colors" style={{ backgroundColor: isSelected ? '#3B82F6' : catStyle.dot }} />
+      {isSelected && (
+        <div className="absolute bottom-3 right-3 text-blue-500 dark:text-blue-400 pointer-events-none opacity-20">
+          <CheckCircle size={48} />
+        </div>
+      )}
 
       <div className="flex-1 p-4">
         {editing ? (
@@ -217,11 +236,7 @@ function TaskCardInner({ task, locale, allTags, onUpdate, onDelete, onDuplicate,
             {/* 제목 + 액션 */}
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                {bulkMode && (
-                  <input type="checkbox" checked={selected} onChange={() => onSelect?.(task.id)}
-                    className="w-3.5 h-3.5 rounded border-gray-300 dark:border-slate-600 accent-blue-600 shrink-0" />
-                )}
-                <div {...(dragHandleProps || {})} className="cursor-grab active:cursor-grabbing text-gray-300 dark:text-slate-600 hover:text-gray-500 dark:hover:text-slate-400 shrink-0">
+                <div {...(dragHandleProps || {})} onClick={(e) => e.stopPropagation()} className="cursor-grab active:cursor-grabbing text-gray-300 dark:text-slate-600 hover:text-gray-500 dark:hover:text-slate-400 shrink-0">
                   <GripVertical size={14} />
                 </div>
                 {task.pinned && <Pin size={12} className="text-yellow-500 shrink-0 -rotate-45" />}

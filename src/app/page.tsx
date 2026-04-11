@@ -234,13 +234,15 @@ export default function DashboardPage() {
               <button className="rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 p-2 text-gray-500 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors" title="Language">
                 <Globe size={16} />
               </button>
-              <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-50 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 shadow-lg overflow-hidden">
-                {(['ko', 'en', 'ja'] as Locale[]).map((l) => (
-                  <button key={l} onClick={() => setLocale(l)}
-                    className={`block w-full text-left px-4 py-2 text-xs hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors ${locale === l ? 'font-bold text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-slate-300'}`}>
-                    {LOCALE_LABELS[l]}
-                  </button>
-                ))}
+              <div className="absolute right-0 top-full pt-1 hidden group-hover:block z-50 w-28">
+                <div className="rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 shadow-lg overflow-hidden">
+                  {(['ko', 'en', 'ja'] as Locale[]).map((l) => (
+                    <button key={l} onClick={() => setLocale(l)}
+                      className={`block w-full text-left px-4 py-2 text-xs hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors ${locale === l ? 'font-bold text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-slate-300'}`}>
+                      {LOCALE_LABELS[l]}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
             <button onClick={toggleTheme}
@@ -388,40 +390,49 @@ export default function DashboardPage() {
                 </div>
               </div>
               <button onClick={() => { setBulkMode((v) => !v); setSelectedIds(new Set()); }}
-                className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-                  bulkMode ? 'bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-slate-600'
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                  bulkMode ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700' : 'bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700'
                 }`}>
-                <CheckSquare size={12} /> {t('bulkEdit', locale)}
+                <CheckSquare size={14} /> {bulkMode ? t('cancel', locale) : t('bulkEdit', locale)}
               </button>
             </div>
 
             {/* 일괄 편집 바 */}
-            {bulkMode && selectedIds.size > 0 && (
-              <div className="mb-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-3 flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold text-blue-700 dark:text-blue-300">{t('bulkSelected', locale, { n: selectedIds.size })}</span>
-                <select onChange={(e) => { if (e.target.value) bulkUpdateStatus(e.target.value as TaskStatus); e.target.value = ''; }}
-                  className="rounded border border-blue-200 dark:border-blue-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs text-gray-700 dark:text-slate-300">
-                  <option value="">{t('statusLabel', locale)}</option>
-                  <option value="todo">{t('todo', locale)}</option>
-                  <option value="in-progress">{t('inProgress', locale)}</option>
-                  <option value="done">{t('done', locale)}</option>
-                </select>
-                <select onChange={(e) => { if (e.target.value) bulkUpdatePriority(e.target.value as Priority); e.target.value = ''; }}
-                  className="rounded border border-blue-200 dark:border-blue-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs text-gray-700 dark:text-slate-300">
-                  <option value="">{t('priorityLabel', locale)}</option>
-                  <option value="high">{t('high', locale)}</option>
-                  <option value="normal">{t('normal', locale)}</option>
-                  <option value="low">{t('low', locale)}</option>
-                </select>
-                <select onChange={(e) => { if (e.target.value) bulkUpdateCategory(e.target.value as TaskCategory); e.target.value = ''; }}
-                  className="rounded border border-blue-200 dark:border-blue-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs text-gray-700 dark:text-slate-300">
-                  <option value="">{t('categoryLabel', locale)}</option>
-                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <button onClick={bulkDeleteSelected}
-                  className="flex items-center gap-1 rounded border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900">
-                  <Trash2 size={11} /> {t('bulkDelete', locale)}
-                </button>
+            {bulkMode && (
+              <div className="mb-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/20 p-3 shadow-inner">
+                {selectedIds.size > 0 ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-blue-700 dark:text-blue-300 mr-2">{t('bulkSelected', locale, { n: selectedIds.size })}</span>
+                    <select onChange={(e) => { if (e.target.value) bulkUpdateStatus(e.target.value as TaskStatus); e.target.value = ''; }}
+                      className="rounded-lg border border-blue-200 dark:border-blue-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
+                      <option value="">{t('statusLabel', locale)}</option>
+                      <option value="todo">{t('todo', locale)}</option>
+                      <option value="in-progress">{t('inProgress', locale)}</option>
+                      <option value="done">{t('done', locale)}</option>
+                    </select>
+                    <select onChange={(e) => { if (e.target.value) bulkUpdatePriority(e.target.value as Priority); e.target.value = ''; }}
+                      className="rounded-lg border border-blue-200 dark:border-blue-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
+                      <option value="">{t('priorityLabel', locale)}</option>
+                      <option value="high">{t('high', locale)}</option>
+                      <option value="normal">{t('normal', locale)}</option>
+                      <option value="low">{t('low', locale)}</option>
+                    </select>
+                    <select onChange={(e) => { if (e.target.value) bulkUpdateCategory(e.target.value as TaskCategory); e.target.value = ''; }}
+                      className="rounded-lg border border-blue-200 dark:border-blue-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
+                      <option value="">{t('categoryLabel', locale)}</option>
+                      {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <div className="flex-1" />
+                    <button onClick={bulkDeleteSelected}
+                      className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-red-700 transition-colors">
+                      <Trash2 size={13} /> {t('bulkDelete', locale)}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center text-sm font-medium text-blue-600 dark:text-blue-400 py-1">
+                    {locale === 'ko' ? '원하는 할 일 카드를 클릭하여 선택하세요.' : locale === 'en' ? 'Click on task cards to select.' : 'タスクカードをクリックして選択してください。'}
+                  </div>
+                )}
               </div>
             )}
 
