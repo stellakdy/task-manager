@@ -15,6 +15,12 @@ export interface TimeSession {
   end?: string;   // ISO 8601
 }
 
+export interface TaskLink {
+  id: string;
+  name: string;
+  url: string;
+}
+
 export interface RepeatRule {
   type: 'daily' | 'weekly' | 'monthly';
   interval: number;    // 매 N일/주/월
@@ -44,6 +50,7 @@ export interface Task {
   deletedAt?: string;      // soft delete — ISO 8601
   repeat?: RepeatRule;
   timeSessions: TimeSession[];
+  links: TaskLink[];
 }
 
 export interface ITaskRepository {

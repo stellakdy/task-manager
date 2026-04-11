@@ -3,10 +3,10 @@
 import { useMemo, useState } from 'react';
 import type { Task } from '@/core/ports/taskRepository';
 import { CATEGORIES, CATEGORY_STYLES, type TaskCategory } from '@/utils/categories';
+import { t } from '@/utils/i18n';
+import type { Locale } from '@/utils/i18n';
 
 const WEEKS = 17;
-const DAY_LABELS = ['월', '', '수', '', '금', '', '일'];
-const MONTH_NAMES = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 
 interface DayCell {
   date: Date;
@@ -99,7 +99,7 @@ function getMonthLabels(weeks: DayCell[][]): { weekIdx: number; label: string }[
   weeks.forEach((week, i) => {
     const m = week[0].date.getMonth();
     if (m !== lastMonth) {
-      labels.push({ weekIdx: i, label: MONTH_NAMES[m] });
+      labels.push({ weekIdx: i, label: String(m) });
       lastMonth = m;
     }
   });
@@ -112,7 +112,7 @@ interface TooltipState {
   y: number;
 }
 
-export default function HeatmapCalendar({ tasks }: { tasks: Task[] }) {
+export default function HeatmapCalendar({ tasks, locale }: { tasks: Task[]; locale: Locale }) {
   const { weeks } = useMemo(() => buildGrid(tasks), [tasks]);
   const monthLabels = useMemo(() => getMonthLabels(weeks), [weeks]);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
@@ -126,30 +126,36 @@ export default function HeatmapCalendar({ tasks }: { tasks: Task[] }) {
     <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-200">활동 기록</h3>
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-slate-200">{t('heatmapTitle', locale)}</h3>
         <span className="text-xs text-gray-400 dark:text-slate-500">
-          최근 {WEEKS}주 · 완료 {totalDone}건
+          {t('heatmapWeeks', locale, { n: WEEKS, c: totalDone })}
         </span>
       </div>
 
       {/* 월 레이블 */}
-      <div className="flex mb-1" style={{ paddingLeft: 20 }}>
-        {weeks.map((_, i) => {
-          const lbl = monthLabels.find((l) => l.weekIdx === i);
-          return (
-            <div key={i} style={{ width: CELL + GAP, minWidth: CELL + GAP }}
-              className="text-[9px] text-gray-400 dark:text-slate-600 overflow-hidden">
-              {lbl?.label ?? ''}
-            </div>
-          );
-        })}
-      </div>
+      {(() => {
+        const monthNamesArr = t('calMonths', locale).split(',');
+        const localMonthLabels = monthLabels.map((l) => ({ ...l, label: monthNamesArr[weeks[l.weekIdx]?.[0]?.date.getMonth()] ?? l.label }));
+        return (
+          <div className="flex mb-1" style={{ paddingLeft: 20 }}>
+            {weeks.map((_, i) => {
+              const lbl = localMonthLabels.find((l) => l.weekIdx === i);
+              return (
+                <div key={i} style={{ width: CELL + GAP, minWidth: CELL + GAP }}
+                  className="text-[9px] text-gray-400 dark:text-slate-600 overflow-hidden">
+                  {lbl?.label ?? ''}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* 그리드 */}
       <div className="flex" style={{ gap: GAP }}>
         {/* 요일 레이블 */}
         <div className="flex flex-col" style={{ gap: GAP, marginRight: GAP }}>
-          {DAY_LABELS.map((lbl, i) => (
+          {t('heatDays', locale).split(',').map((lbl, i) => (
             <div key={i} style={{ width: 14, height: CELL }}
               className="text-[9px] text-gray-400 dark:text-slate-600 flex items-center justify-end pr-0.5">
               {lbl}
@@ -216,14 +222,14 @@ export default function HeatmapCalendar({ tasks }: { tasks: Task[] }) {
         >
           <div className="font-medium">{tooltip.cell.dateStr}</div>
           {tooltip.cell.count === 0 ? (
-            <div className="text-gray-400">완료 없음</div>
+            <div className="text-gray-400">{t('heatmapNone', locale)}</div>
           ) : (
             <>
-              <div className="text-gray-300">총 {tooltip.cell.count}건 완료</div>
+              <div className="text-gray-300">{t('heatmapDone', locale, { n: tooltip.cell.count })}</div>
               {Object.entries(tooltip.cell.breakdown).map(([cat, cnt]) => (
                 <div key={cat} className="flex items-center gap-1 mt-0.5">
                   <div style={{ width: 6, height: 6, backgroundColor: CATEGORY_STYLES[cat as TaskCategory].dot, borderRadius: 1 }} />
-                  <span className="text-gray-300">{cat} {cnt}건</span>
+                  <span className="text-gray-300">{t('heatmapCat', locale, { cat, n: cnt })}</span>
                 </div>
               ))}
             </>

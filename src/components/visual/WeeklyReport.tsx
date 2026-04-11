@@ -4,9 +4,12 @@ import { useState, useMemo } from 'react';
 import type { Task } from '@/core/ports/taskRepository';
 import { CATEGORIES, CATEGORY_STYLES } from '@/utils/categories';
 import type { TaskCategory } from '@/utils/categories';
+import { t } from '@/utils/i18n';
+import type { Locale } from '@/utils/i18n';
 
 interface Props {
   tasks: Task[];
+  locale: Locale;
 }
 
 type Period = 'week' | 'month';
@@ -28,15 +31,20 @@ function getMonthRange(): [Date, Date] {
   return [start, end];
 }
 
-function formatDuration(ms: number): string {
-  if (ms === 0) return '-';
+function formatDuration(ms: number, locale: Locale): string {
+  if (ms === 0) return t('rptNone', locale);
   const h = Math.floor(ms / 3600000);
   const m = Math.floor((ms % 3600000) / 60000);
-  if (h > 0) return `${h}시간 ${m}분`;
-  return `${m}분`;
+  if (h > 0) return t('rptDurH', locale, { h, m });
+  return t('rptDurM', locale, { m });
 }
 
-export default function WeeklyReport({ tasks }: Props) {
+function formatDateRange(start: Date, end: Date): string {
+  const last = new Date(end.getTime() - 86400000); // end - 1 day
+  return `${start.getMonth() + 1}/${start.getDate()} ~ ${last.getMonth() + 1}/${last.getDate()}`;
+}
+
+export default function WeeklyReport({ tasks, locale }: Props) {
   const [period, setPeriod] = useState<Period>('week');
 
   const report = useMemo(() => {
@@ -106,26 +114,26 @@ export default function WeeklyReport({ tasks }: Props) {
           className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
             period === 'week' ? 'bg-gray-900 dark:bg-slate-100 text-white dark:text-slate-900' : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400'
           }`}>
-          이번 주
+          {t('thisWeek', locale)}
         </button>
         <button onClick={() => setPeriod('month')}
           className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
             period === 'month' ? 'bg-gray-900 dark:bg-slate-100 text-white dark:text-slate-900' : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400'
           }`}>
-          이번 달
+          {t('thisMonth', locale)}
         </button>
         <span className="text-[10px] text-gray-400 dark:text-slate-500 ml-auto">
-          {report.start.getMonth() + 1}/{report.start.getDate()} ~ {report.end.getMonth() + 1}/{report.end.getDate() - 1}
+          {formatDateRange(report.start, report.end)}
         </span>
       </div>
 
       {/* 핵심 지표 */}
       <div className="grid grid-cols-4 gap-2">
         {[
-          { label: '완료', value: report.completed, color: 'text-green-600 dark:text-green-400' },
-          { label: '생성', value: report.created, color: 'text-blue-600 dark:text-blue-400' },
-          { label: '진행 중', value: report.inProgress, color: 'text-yellow-600 dark:text-yellow-400' },
-          { label: '기한 초과', value: report.overdue, color: 'text-red-600 dark:text-red-400' },
+          { label: t('completed', locale), value: report.completed, color: 'text-green-600 dark:text-green-400' },
+          { label: t('created', locale), value: report.created, color: 'text-blue-600 dark:text-blue-400' },
+          { label: t('rptInProgress', locale), value: report.inProgress, color: 'text-yellow-600 dark:text-yellow-400' },
+          { label: t('rptOverdue', locale), value: report.overdue, color: 'text-red-600 dark:text-red-400' },
         ].map(({ label, value, color }) => (
           <div key={label} className="text-center">
             <div className={`text-lg font-bold ${color}`}>{value}</div>
@@ -137,7 +145,7 @@ export default function WeeklyReport({ tasks }: Props) {
       {/* 완료율 바 */}
       <div>
         <div className="flex justify-between text-[10px] text-gray-500 dark:text-slate-400 mb-1">
-          <span>완료율</span>
+          <span>{t('rptRate', locale)}</span>
           <span>{report.rate}%</span>
         </div>
         <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
@@ -147,7 +155,7 @@ export default function WeeklyReport({ tasks }: Props) {
 
       {/* 카테고리별 차트 */}
       <div className="space-y-1.5">
-        <span className="text-[10px] font-medium text-gray-500 dark:text-slate-400">카테고리별 완료</span>
+        <span className="text-[10px] font-medium text-gray-500 dark:text-slate-400">{t('byCategory', locale)}</span>
         {CATEGORIES.map((cat) => {
           const count = report.byCategory[cat];
           const cs = CATEGORY_STYLES[cat];
@@ -168,8 +176,8 @@ export default function WeeklyReport({ tasks }: Props) {
       {/* 총 작업 시간 */}
       {report.totalTimeMs > 0 && (
         <div className="text-center pt-2 border-t border-gray-100 dark:border-slate-700">
-          <div className="text-xs text-gray-500 dark:text-slate-400">총 작업 시간</div>
-          <div className="text-sm font-bold text-gray-800 dark:text-slate-200">{formatDuration(report.totalTimeMs)}</div>
+          <div className="text-xs text-gray-500 dark:text-slate-400">{t('totalWorkTime', locale)}</div>
+          <div className="text-sm font-bold text-gray-800 dark:text-slate-200">{formatDuration(report.totalTimeMs, locale)}</div>
         </div>
       )}
     </div>

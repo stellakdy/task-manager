@@ -1,12 +1,24 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "할 일 관리",
+  title: "할 일 관리 - Task Manager",
   description: "마감 임박도 시각화 기반 할 일 관리 앱",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Task Manager",
+  },
 };
 
-// 다크모드 FOUC 방지: React 렌더 전에 클래스 적용
+export const viewport: Viewport = {
+  themeColor: "#111827",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 const darkModeScript = `
 (function(){
   try {
@@ -17,6 +29,14 @@ const darkModeScript = `
 })();
 `;
 
+const swScript = `
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/sw.js');
+  });
+}
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -24,6 +44,8 @@ export default function RootLayout({
     <html lang="ko" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: darkModeScript }} />
+        <script dangerouslySetInnerHTML={{ __html: swScript }} />
+        <link rel="apple-touch-icon" href="/icon-512.png" />
       </head>
       <body className="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-slate-100 antialiased transition-colors duration-200">
         {children}

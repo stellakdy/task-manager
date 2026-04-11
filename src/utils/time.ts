@@ -1,3 +1,6 @@
+import { t } from '@/utils/i18n';
+import type { Locale } from '@/utils/i18n';
+
 export type UrgencyLevel = 'safe' | 'moderate' | 'warning' | 'critical' | 'overdue';
 
 const HOUR = 3600000;
@@ -12,10 +15,6 @@ export function getUrgency(deadline: string): UrgencyLevel {
   return 'safe';
 }
 
-/**
- * Returns 0–100 where 0 = just created, 100 = at or past deadline.
- * Falls back to a 7-day window if createdAt is missing.
- */
 export function getUrgencyPercent(deadline: string, createdAt?: string): number {
   const now = Date.now();
   const end = new Date(deadline).getTime();
@@ -29,29 +28,25 @@ export function getUrgencyPercent(deadline: string, createdAt?: string): number 
   return Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
 }
 
-export function formatTimeLeft(deadline: string): string {
+export function formatTimeLeft(deadline: string, locale: Locale = 'ko'): string {
   const msLeft = new Date(deadline).getTime() - Date.now();
-  if (msLeft < 0) return '기한 초과';
+  if (msLeft < 0) return t('overdue', locale);
 
   const totalMinutes = Math.floor(msLeft / 60000);
   const days = Math.floor(totalMinutes / 1440);
   const hours = Math.floor((totalMinutes % 1440) / 60);
   const minutes = totalMinutes % 60;
 
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
+  if (days > 0) return t('daysHours', locale, { d: days, h: hours });
+  if (hours > 0) return t('hoursMinutes', locale, { h: hours, m: minutes });
+  if (minutes > 0) return t('minutesOnly', locale, { m: minutes });
+  return t('justNow', locale);
 }
 
-/** Sort weight: lower = more urgent. Overdue floats to top, safe to bottom. */
 export function urgencyWeight(deadline: string): number {
   const level = getUrgency(deadline);
   const order: Record<UrgencyLevel, number> = {
-    overdue: 0,
-    critical: 1,
-    warning: 2,
-    moderate: 3,
-    safe: 4,
+    overdue: 0, critical: 1, warning: 2, moderate: 3, safe: 4,
   };
   return order[level];
 }

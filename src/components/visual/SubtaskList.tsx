@@ -4,14 +4,17 @@ import { useState } from 'react';
 import { Plus, X, Check } from 'lucide-react';
 import type { Subtask } from '@/core/ports/taskRepository';
 import { v4 as uuid } from 'uuid';
+import { t } from '@/utils/i18n';
+import type { Locale } from '@/utils/i18n';
 
 interface Props {
   subtasks: Subtask[];
   onChange: (subtasks: Subtask[]) => void;
   readonly?: boolean;
+  locale?: Locale;
 }
 
-export default function SubtaskList({ subtasks, onChange, readonly }: Props) {
+export default function SubtaskList({ subtasks, onChange, readonly, locale = 'ko' }: Props) {
   const [newTitle, setNewTitle] = useState('');
 
   function addSubtask() {
@@ -75,7 +78,7 @@ export default function SubtaskList({ subtasks, onChange, readonly }: Props) {
         <div className="flex gap-1.5 mt-1">
           <input
             type="text"
-            placeholder="세부 항목 추가..."
+            placeholder={t('addSubtask', locale)}
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSubtask())}

@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 완료 애니메이션 */
+@keyframes task-complete {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.02); box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.3); }
+  60%  { transform: scale(0.98); }
+  100% { transform: scale(1); box-shadow: none; }
+}
+.animate-complete {
+  animation: task-complete 0.6s ease-out;
+}
+
 /* 다크모드 스크롤바 */
 .dark ::-webkit-scrollbar { width: 6px; height: 6px; }
 .dark ::-webkit-scrollbar-track { background: #1e293b; }

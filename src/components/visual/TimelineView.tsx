@@ -4,20 +4,25 @@ import { useMemo } from 'react';
 import type { Task } from '@/core/ports/taskRepository';
 import { CATEGORY_STYLES } from '@/utils/categories';
 import { formatTimeLeft } from '@/utils/time';
+import { t } from '@/utils/i18n';
+import type { Locale } from '@/utils/i18n';
 
 interface Props {
   tasks: Task[];
+  locale: Locale;
 }
 
-function dayLabel(d: Date): string {
+function dayLabel(d: Date, locale: Locale): string {
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
 
-  if (d.toDateString() === today.toDateString()) return '오늘';
-  if (d.toDateString() === tomorrow.toDateString()) return '내일';
+  if (d.toDateString() === today.toDateString()) return t('today', locale);
+  if (d.toDateString() === tomorrow.toDateString()) return t('tomorrow', locale);
 
-  const dow = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+  const daysStr = t('calDays', locale);
+  const days = daysStr.split(',');
+  const dow = days[d.getDay()] ?? '';
   return `${d.getMonth() + 1}/${d.getDate()} (${dow})`;
 }
 
@@ -31,7 +36,7 @@ interface DayGroup {
   tasks: Task[];
 }
 
-export default function TimelineView({ tasks }: Props) {
+export default function TimelineView({ tasks, locale }: Props) {
   const groups = useMemo(() => {
     const now = new Date();
     const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -47,17 +52,17 @@ export default function TimelineView({ tasks }: Props) {
       const d = new Date(t.deadline);
       const key = d.toDateString();
       if (!map.has(key)) {
-        map.set(key, { label: dayLabel(d), date: d, tasks: [] });
+        map.set(key, { label: dayLabel(d, locale), date: d, tasks: [] });
       }
       map.get(key)!.tasks.push(t);
     }
     return Array.from(map.values());
-  }, [tasks]);
+  }, [tasks, locale]);
 
   if (groups.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 py-10 text-center">
-        <p className="text-sm text-gray-400 dark:text-slate-500">이번 주 내 마감 예정인 작업이 없습니다.</p>
+        <p className="text-sm text-gray-400 dark:text-slate-500">{t('noTimelineTasks', locale)}</p>
       </div>
     );
   }
@@ -81,7 +86,7 @@ export default function TimelineView({ tasks }: Props) {
             <div className="pt-1.5 pb-1">
               <span className={`text-xs font-bold ${
                 isOverdue ? 'text-red-600 dark:text-red-400' :
-                group.label === '오늘' ? 'text-blue-600 dark:text-blue-400' :
+                group.label === t('today', locale) ? 'text-blue-600 dark:text-blue-400' :
                 'text-gray-600 dark:text-slate-400'
               }`}>
                 {group.label}
@@ -90,16 +95,16 @@ export default function TimelineView({ tasks }: Props) {
 
             {/* 작업들 */}
             <div className="space-y-1.5 pb-3">
-              {group.tasks.map((t) => {
-                const dl = new Date(t.deadline);
+              {group.tasks.map((task) => {
+                const dl = new Date(task.deadline);
                 const overdue = dl < new Date();
-                const cs = CATEGORY_STYLES[t.category ?? '기타'];
-                const progress = t.subtasks.length > 0
-                  ? Math.round((t.subtasks.filter((s) => s.done).length / t.subtasks.length) * 100)
-                  : t.progress;
+                const cs = CATEGORY_STYLES[task.category ?? '기타'];
+                const progress = task.subtasks.length > 0
+                  ? Math.round((task.subtasks.filter((s) => s.done).length / task.subtasks.length) * 100)
+                  : task.progress;
 
                 return (
-                  <div key={t.id}
+                  <div key={task.id}
                     className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${
                       overdue
                         ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950'
@@ -117,7 +122,7 @@ export default function TimelineView({ tasks }: Props) {
 
                     {/* 제목 */}
                     <span className="flex-1 text-xs font-medium text-gray-800 dark:text-slate-200 truncate">
-                      {t.title}
+                      {task.title}
                     </span>
 
                     {/* 진행률 바 */}
@@ -131,7 +136,7 @@ export default function TimelineView({ tasks }: Props) {
                     <span className={`text-[10px] font-medium shrink-0 ${
                       overdue ? 'text-red-500 dark:text-red-400' : 'text-gray-400 dark:text-slate-500'
                     }`}>
-                      {formatTimeLeft(t.deadline)}
+                      {formatTimeLeft(task.deadline, locale)}
                     </span>
                   </div>
                 );

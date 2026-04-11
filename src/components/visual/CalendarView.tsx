@@ -4,18 +4,19 @@ import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Task } from '@/core/ports/taskRepository';
 import { CATEGORY_STYLES } from '@/utils/categories';
+import { t } from '@/utils/i18n';
+import type { Locale } from '@/utils/i18n';
 
 interface Props {
   tasks: Task[];
+  locale: Locale;
 }
 
 function sameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
-
-export default function CalendarView({ tasks }: Props) {
+export default function CalendarView({ tasks, locale }: Props) {
   const [cursor, setCursor] = useState(() => {
     const d = new Date();
     return { year: d.getFullYear(), month: d.getMonth() };
@@ -28,17 +29,20 @@ export default function CalendarView({ tasks }: Props) {
 
   const prev = () => setCursor((c) => c.month === 0 ? { year: c.year - 1, month: 11 } : { ...c, month: c.month - 1 });
   const next = () => setCursor((c) => c.month === 11 ? { year: c.year + 1, month: 0 } : { ...c, month: c.month + 1 });
-  const today = () => { const d = new Date(); setCursor({ year: d.getFullYear(), month: d.getMonth() }); };
+  const goToday = () => { const d = new Date(); setCursor({ year: d.getFullYear(), month: d.getMonth() }); };
 
-  // 해당 월의 마감 작업을 날짜별로 그룹핑
+  // i18n 요일 / 월 이름
+  const dayLabels = t('calDays', locale).split(',');
+  const monthNames = t('calMonths', locale).split(',');
+
   const dayMap = useMemo(() => {
     const map = new Map<number, Task[]>();
-    tasks.forEach((t) => {
-      const d = new Date(t.deadline);
+    tasks.forEach((tk) => {
+      const d = new Date(tk.deadline);
       if (d.getFullYear() === year && d.getMonth() === month) {
         const day = d.getDate();
         if (!map.has(day)) map.set(day, []);
-        map.get(day)!.push(t);
+        map.get(day)!.push(tk);
       }
     });
     return map;
@@ -50,76 +54,81 @@ export default function CalendarView({ tasks }: Props) {
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
   while (cells.length % 7 !== 0) cells.push(null);
 
+  // 헤더 텍스트
+  const headerText = locale === 'en'
+    ? `${monthNames[month]} ${year}`
+    : locale === 'ja'
+      ? `${year}年 ${monthNames[month]}`
+      : `${year}년 ${month + 1}월`;
+
   return (
     <div className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-3">
         <button onClick={prev} className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded"><ChevronLeft size={16} className="text-gray-500 dark:text-slate-400" /></button>
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-bold text-gray-800 dark:text-slate-200">{year}년 {month + 1}월</h3>
-          <button onClick={today} className="text-[10px] text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 underline">오늘</button>
+          <h3 className="text-sm font-bold text-gray-800 dark:text-slate-200">{headerText}</h3>
+          <button onClick={goToday} className="text-[10px] text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 underline">{t('calToday', locale)}</button>
         </div>
         <button onClick={next} className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded"><ChevronRight size={16} className="text-gray-500 dark:text-slate-400" /></button>
       </div>
 
-      {/* 요일 헤더 */}
+      {/* 요일 */}
       <div className="grid grid-cols-7 mb-1">
-        {DAY_LABELS.map((d) => (
-          <div key={d} className="text-center text-[10px] font-medium text-gray-400 dark:text-slate-500 py-1">{d}</div>
+        {dayLabels.map((d, i) => (
+          <div key={i} className={`text-center text-[10px] font-medium py-1 ${i === 0 ? 'text-red-400' : i === 6 ? 'text-blue-400' : 'text-gray-400 dark:text-slate-500'}`}>{d}</div>
         ))}
       </div>
 
       {/* 날짜 그리드 */}
-      <div className="grid grid-cols-7 gap-0.5">
+      <div className="grid grid-cols-7 gap-px bg-gray-100 dark:bg-slate-700 rounded-lg overflow-hidden">
         {cells.map((day, i) => {
-          if (day === null) return <div key={i} className="aspect-square" />;
+          if (day === null) return <div key={i} className="min-h-[72px] bg-gray-50 dark:bg-slate-800/50" />;
           const dateTasks = dayMap.get(day) ?? [];
           const isToday = sameDay(new Date(year, month, day), todayDate);
-          const hasDone = dateTasks.some((t) => t.status === 'done');
-          const hasOverdue = dateTasks.some((t) => t.status !== 'done' && new Date(t.deadline) < new Date());
+          const dow = (startDow + day - 1) % 7;
 
           return (
-            <div key={i} className={`aspect-square rounded-lg p-0.5 flex flex-col items-center justify-start relative group cursor-default transition-colors ${
-              isToday ? 'bg-blue-50 dark:bg-blue-950 ring-1 ring-blue-300 dark:ring-blue-700' : 'hover:bg-gray-50 dark:hover:bg-slate-750'
+            <div key={i} className={`min-h-[72px] p-1 bg-white dark:bg-slate-800 relative group ${
+              isToday ? 'ring-2 ring-inset ring-blue-400 dark:ring-blue-500' : ''
             }`}>
-              <span className={`text-[11px] font-medium ${isToday ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-gray-600 dark:text-slate-400'}`}>
-                {day}
-              </span>
-              {/* 작업 도트 */}
-              {dateTasks.length > 0 && (
-                <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center">
-                  {dateTasks.slice(0, 3).map((t) => {
-                    const cs = CATEGORY_STYLES[t.category ?? '기타'];
-                    return (
-                      <div key={t.id}
-                        className={`w-1.5 h-1.5 rounded-full ${t.status === 'done' ? 'opacity-40' : ''}`}
-                        style={{ backgroundColor: cs.dot }}
-                        title={t.title}
-                      />
-                    );
-                  })}
-                  {dateTasks.length > 3 && (
-                    <span className="text-[8px] text-gray-400 dark:text-slate-500">+{dateTasks.length - 3}</span>
-                  )}
-                </div>
-              )}
-              {/* 상태 인디케이터 */}
-              {hasOverdue && <div className="absolute bottom-0.5 right-0.5 w-1 h-1 rounded-full bg-red-500" />}
-              {hasDone && !hasOverdue && <div className="absolute bottom-0.5 right-0.5 w-1 h-1 rounded-full bg-green-500" />}
+              {/* 날짜 숫자 */}
+              <div className="flex items-center justify-between mb-0.5">
+                <span className={`text-[11px] font-medium leading-none ${
+                  isToday ? 'bg-blue-500 text-white w-5 h-5 rounded-full flex items-center justify-center' :
+                  dow === 0 ? 'text-red-400' : dow === 6 ? 'text-blue-400' : 'text-gray-600 dark:text-slate-400'
+                }`}>
+                  {day}
+                </span>
+                {dateTasks.length > 3 && (
+                  <span className="text-[8px] text-gray-400 dark:text-slate-500">+{dateTasks.length - 3}</span>
+                )}
+              </div>
 
-              {/* 호버 툴팁 */}
-              {dateTasks.length > 0 && (
-                <div className="absolute z-30 hidden group-hover:block top-full left-1/2 -translate-x-1/2 mt-1 w-44 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 shadow-lg p-2">
-                  {dateTasks.map((t) => (
-                    <div key={t.id} className="flex items-center gap-1.5 py-0.5">
-                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: CATEGORY_STYLES[t.category ?? '기타'].dot }} />
-                      <span className={`text-[10px] truncate ${t.status === 'done' ? 'line-through text-gray-400 dark:text-slate-500' : 'text-gray-700 dark:text-slate-300'}`}>
-                        {t.title}
-                      </span>
+              {/* 작업 목록 (최대 3개) */}
+              <div className="space-y-0.5">
+                {dateTasks.slice(0, 3).map((tk) => {
+                  const cs = CATEGORY_STYLES[tk.category ?? '기타'];
+                  const isDone = tk.status === 'done';
+                  const isOverdue = !isDone && new Date(tk.deadline) < new Date();
+
+                  return (
+                    <div key={tk.id}
+                      className={`flex items-center gap-0.5 rounded px-1 py-px text-[9px] font-medium truncate ${
+                        isDone ? 'opacity-40 line-through' : ''
+                      }`}
+                      style={{
+                        backgroundColor: `${cs.dot}18`,
+                        color: isOverdue ? '#EF4444' : cs.dot,
+                        borderLeft: `2px solid ${cs.dot}`,
+                      }}
+                      title={`${tk.title} - ${new Date(tk.deadline).toLocaleTimeString(locale === 'en' ? 'en' : locale === 'ja' ? 'ja' : 'ko', { hour: '2-digit', minute: '2-digit' })}`}
+                    >
+                      {tk.title}
                     </div>
-                  ))}
-                </div>
-              )}
+                  );
+                })}
+              </div>
             </div>
           );
         })}

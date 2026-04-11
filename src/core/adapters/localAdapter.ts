@@ -32,6 +32,7 @@ function readStorage(): Task[] {
       deletedAt:    t.deletedAt,
       repeat:       t.repeat,
       timeSessions: t.timeSessions ?? [],
+      links:        t.links ?? [],
     }));
   } catch {
     return [];
@@ -97,6 +98,7 @@ class LocalAdapter implements ITaskRepository {
       tags:         [],
       progress:     0,
       timeSessions: [],
+      links:        [],
       ...data,
       id:           uuid(),
       lastModified: now,
