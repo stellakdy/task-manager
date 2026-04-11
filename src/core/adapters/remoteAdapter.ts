@@ -4,6 +4,7 @@
  * when you're ready to go server-side. No UI code changes required.
  */
 import type { ITaskRepository, Task, TaskStatus } from '@/core/ports/taskRepository';
+import type { TaskCategory } from '@/utils/categories';
 
 export class RemoteAdapter implements ITaskRepository {
   constructor(private apiBase: string) {}
@@ -14,7 +15,7 @@ export class RemoteAdapter implements ITaskRepository {
     return res.json();
   }
 
-  async create(data: { title: string; deadline: string; status: TaskStatus }): Promise<Task> {
+  async create(data: { title: string; notes?: string; category: TaskCategory; deadline: string; status: TaskStatus }): Promise<Task> {
     const res = await fetch(`${this.apiBase}/tasks`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

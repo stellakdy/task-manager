@@ -2,17 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer utilities {
-  .animate-glow {
-    animation: glow-pulse 1.5s ease-in-out infinite;
-  }
-}
-
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 4px 1px #FCA5A5; }
-  50%       { box-shadow: 0 0 14px 5px #EF4444; }
-}
-
 /* 다크모드 스크롤바 */
 .dark ::-webkit-scrollbar { width: 6px; height: 6px; }
 .dark ::-webkit-scrollbar-track { background: #1e293b; }

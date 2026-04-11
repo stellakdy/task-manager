@@ -96,7 +96,21 @@ class LocalAdapter implements ITaskRepository {
   }
 
   async importJSON(json: string): Promise<void> {
-    const incoming: Task[] = JSON.parse(json);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(json);
+    } catch {
+      throw new Error('유효하지 않은 JSON 파일입니다.');
+    }
+    if (!Array.isArray(parsed)) {
+      throw new Error('JSON 파일이 배열 형식이 아닙니다.');
+    }
+    const incoming: Task[] = parsed.filter(
+      (item: Record<string, unknown>) => item && typeof item.id === 'string' && typeof item.title === 'string' && typeof item.deadline === 'string'
+    ) as Task[];
+    if (incoming.length === 0) {
+      throw new Error('가져올 수 있는 할 일이 없습니다.');
+    }
     const merged = mergeByLastModified(readStorage(), incoming);
     writeStorage(merged);
   }

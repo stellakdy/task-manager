@@ -265,7 +265,7 @@ export default function DashboardPage() {
           </div>
           {doneCount > 0 && (
             <button
-              onClick={deleteDoneTasks}
+              onClick={() => { if (confirm(`완료된 ${doneCount}개의 할 일을 모두 삭제하시겠습니까?`)) deleteDoneTasks(); }}
               className="flex items-center gap-1 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 px-2.5 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900 transition-colors shrink-0"
             >
               <Trash2 size={11} /> 완료 {doneCount}개 삭제
@@ -312,6 +312,11 @@ export default function DashboardPage() {
               <>
                 <p className="text-sm text-gray-400 dark:text-slate-500">검색 결과가 없습니다.</p>
                 <p className="text-xs text-gray-300 dark:text-slate-600 mt-1">&quot;{searchQuery}&quot; 에 해당하는 할 일이 없어요.</p>
+              </>
+            ) : (filter !== 'all' || categoryFilter !== 'all') ? (
+              <>
+                <p className="text-sm text-gray-400 dark:text-slate-500">해당 필터에 맞는 할 일이 없습니다.</p>
+                <p className="text-xs text-gray-300 dark:text-slate-600 mt-1">다른 필터를 선택하거나 새 할 일을 추가하세요.</p>
               </>
             ) : (
               <>

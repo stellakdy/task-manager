@@ -106,8 +106,9 @@ export function useTasks() {
 
   const updateTask = useCallback(
     async (id: string, patch: Partial<Omit<Task, 'id' | 'createdAt'>>) => {
-      // completedAt 자동 처리
-      const task = tasks.find((t) => t.id === id);
+      // completedAt 자동 처리 — 현재 상태를 storage에서 직접 조회 (stale closure 방지)
+      const all = await taskRepository.getAll();
+      const task = all.find((t) => t.id === id);
       const enriched = { ...patch };
       if (patch.status === 'done' && task?.status !== 'done') {
         enriched.completedAt = new Date().toISOString();
@@ -117,7 +118,7 @@ export function useTasks() {
 
       const updated = await taskRepository.update(id, enriched);
       setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)));
-    }, [tasks]
+    }, []
   );
 
   const deleteTask = useCallback(async (id: string) => {
@@ -139,13 +140,17 @@ export function useTasks() {
     a.href = url;
     a.download = `tasks-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, []);
 
   const importJSON = useCallback(async (file: File) => {
-    const text = await file.text();
-    await taskRepository.importJSON(text);
-    setTasks(await taskRepository.getAll());
+    try {
+      const text = await file.text();
+      await taskRepository.importJSON(text);
+      setTasks(await taskRepository.getAll());
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '파일을 불러올 수 없습니다.');
+    }
   }, []);
 
   const syncToServer = useCallback(async (apiUrl: string) => {

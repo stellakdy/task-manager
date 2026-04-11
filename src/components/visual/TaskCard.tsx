@@ -1,11 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Pencil, Trash2, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
 import type { Task, TaskStatus } from '@/core/ports/taskRepository';
 import { CATEGORY_STYLES } from '@/utils/categories';
 import { getUrgency, formatTimeLeft, UrgencyLevel } from '@/utils/time';
 import UrgencyGauge from './UrgencyGauge';
+
+// ISO 문자열 → 로컬 datetime-local 값
+function toLocalDatetimeValue(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 const zoneStyles: Record<UrgencyLevel, { card: string; text: string; badge: string }> = {
   safe:     { card: 'bg-safe-card border-safe-border',         text: 'text-safe-text',     badge: 'bg-blue-100 text-blue-800'   },
@@ -31,9 +38,18 @@ interface Props {
 export default function TaskCard({ task, onUpdate, onDelete }: Props) {
   const [editing, setEditing]         = useState(false);
   const [editTitle, setEditTitle]     = useState(task.title);
-  const [editDeadline, setEditDeadline] = useState(task.deadline.slice(0, 16));
+  const [editDeadline, setEditDeadline] = useState(toLocalDatetimeValue(task.deadline));
   const [editNotes, setEditNotes]     = useState(task.notes ?? '');
   const [notesOpen, setNotesOpen]     = useState(false);
+  const [isDark, setIsDark]           = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsDark(document.documentElement.classList.contains('dark'));
+    check();
+    const observer = new MutationObserver(check);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   const level    = getUrgency(task.deadline);
   const styles   = zoneStyles[level];
@@ -53,7 +69,7 @@ export default function TaskCard({ task, onUpdate, onDelete }: Props) {
 
   function cancelEdit() {
     setEditTitle(task.title);
-    setEditDeadline(task.deadline.slice(0, 16));
+    setEditDeadline(toLocalDatetimeValue(task.deadline));
     setEditNotes(task.notes ?? '');
     setEditing(false);
   }
@@ -106,7 +122,7 @@ export default function TaskCard({ task, onUpdate, onDelete }: Props) {
                 className="rounded p-1 hover:bg-black/10 dark:hover:bg-white/10 transition-colors" aria-label="수정">
                 <Pencil size={13} className={styles.text} />
               </button>
-              <button onClick={() => onDelete(task.id)}
+              <button onClick={() => { if (confirm('이 할 일을 삭제하시겠습니까?')) onDelete(task.id); }}
                 className="rounded p-1 hover:bg-black/10 dark:hover:bg-white/10 transition-colors" aria-label="삭제">
                 <Trash2 size={13} className={styles.text} />
               </button>
@@ -119,9 +135,9 @@ export default function TaskCard({ task, onUpdate, onDelete }: Props) {
             <span
               className="rounded-full px-2 py-0.5 text-xs font-semibold border"
               style={{
-                backgroundColor: catStyle.bg,
-                color:           catStyle.text,
-                borderColor:     catStyle.border,
+                backgroundColor: isDark ? catStyle.darkBg : catStyle.bg,
+                color:           isDark ? catStyle.darkText : catStyle.text,
+                borderColor:     isDark ? `${catStyle.darkText}40` : catStyle.border,
               }}
             >
               {task.category ?? '기타'}
